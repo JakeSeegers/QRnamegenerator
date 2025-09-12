@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .qr-wrapper {
+            position: relative;
+            width: 400px;
+            height: 400px;
+        }
+
+        .qr-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 400px;
+            height: 400px;
+            border: 10px solid white;
+            border-radius: 8px;
+        }
+
+        .white-overlay {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            background-color: white;
+            opacity: 0;
+            z-index: 1;
+        }
+
+        @media print {
+            body {
+                background-color: #fff;
+            }
+
+            .qr-canvas {
+                border: 5px solid black;
+                border-radius: 0;
+            }
+
+            .white-overlay {
+                background-color: black;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="qr-wrapper">
+        <canvas id="qr-canvas" class="qr-canvas"></canvas>
+        <div id="white-overlay" class="white-overlay"></div>
+    </div>
+
+    <script>
+        const femaleNames = [
+            'Adelaide', 'Alma', 'Barsaba', 'Beatrix', 'Bianca', 'Cleopha',
+            'Clover', 'Constance', 'Damaris', 'Daphne', 'Demona', 'Elsbeth',
+            'Esme', 'Fern', 'Hester', 'Hippolyta', 'Jessamine', 'Jilly',
+            'Margot', 'Minerva', 'Nerissa', 'Odette', 'Olga', 'Orchid',
+            'Pepper', 'Phoebe', 'Piety', 'Poppy', 'Silence', 'Sybil',
+            'Trillby', 'Tuesday', 'Ursula', 'Vivian', 'Wendy', 'Zora'
+        ];
+        
+        const maleNames = [
+            'Balthazar', 'Basil', 'Bertram', 'Bexley', 'Chadwick', 'Clovis',
+            'Destrian', 'Ellis', 'Erasmus', 'Faustus', 'Finn', 'Fitzhugh',
+            'Florian', 'Fox', 'Godwin', 'Hannibal', 'Jasper', 'Jiles',
+            'Jules', 'Leopold', 'Malarick', 'Mortimer', 'Ogden', 'Orion',
+            'Oswald', 'Percival', 'Peregrine', 'Quentin', 'Redmaine', 'Reinhold',
+            'Silas', 'Stilton', 'Stratford', 'Tenpiece', 'Waverly', 'Webster'
+        ];
+        
+        const lowerClassSurnames = [
+            'Barrow', 'Beetleman', 'Berrycloth', 'Birdwhistle', 'Bobich', 'Chips',
+            'Coffin', 'Crumpling', 'Culpepper', 'Dankworth', 'Digworthy', 'Dreggs',
+            'Gimble', 'Graveworm', 'Greelish', 'Hardwick', 'Hatman', 'Hovel',
+            'Knibbs', 'Midnighter', 'Needle', 'Nethercoat', 'Pestle', 'Relish',
+            'Rumbold', 'Runmage', 'Sallow', 'Saltmarsh', 'Silverless', 'Skitter',
+            'Slee', 'Slitherly', 'Stoker', 'Tartwater', 'Tumbler', 'Villin'
+        ];
+        
+        const upperClassSurnames = [
+            'Belvedere', 'Bithersea', 'Calaver', 'Carvolo', 'De Rippe', 'Droll',
+            'Dunlow', 'Edevane', 'Erelong', 'Febland', 'Fernsby', 'Fisk',
+            'Gastrell', 'Girdwood', 'Gorgon', 'Grimeson', 'Gruger', 'Hitheryon',
+            'La Marque', 'Malmora', 'Miter', 'Oblington', 'Onymous', 'Phillifent',
+            'Portendorfer', 'Romatet', 'Rothery', 'Skorbeck', 'Slora', 'Southwark',
+            'Stavish', 'Vandermeer', 'Wellbelove', 'Westergren', 'Wexley', 'Wilberforce'
+        ];
+        
+        const wordSyllables = {
+            'Adelaide': ['Adel', 'aide'], 'Alma': ['Al', 'ma'], 'Barsaba': ['Bar', 'sa', 'ba'],
+            'Beatrix': ['Beat', 'rix'], 'Bianca': ['Bi', 'an', 'ca'], 'Cleopha': ['Cle', 'o', 'pha'],
+            'Clover': ['Clo', 'ver'], 'Constance': ['Con', 'stance'], 'Damaris': ['Da', 'ma', 'ris'],
+            'Daphne': ['Daph', 'ne'], 'Demona': ['De', 'mo', 'na'], 'Elsbeth': ['Els', 'beth'],
+            'Esme': ['Es', 'me'], 'Fern': ['Fern'], 'Hester': ['Hes', 'ter'],
+            'Hippolyta': ['Hippo', 'ly', 'ta'], 'Jessamine': ['Jessa', 'mine'], 'Jilly': ['Jil', 'ly'],
+            'Margot': ['Mar', 'got'], 'Minerva': ['Mi', 'ner', 'va'], 'Nerissa': ['Ne', 'ris', 'sa'],
+            'Odette': ['O', 'dette'], 'Olga': ['Ol', 'ga'], 'Orchid': ['Or', 'chid'],
+            'Pepper': ['Pep', 'per'], 'Phoebe': ['Phoe', 'be'], 'Piety': ['Pie', 'ty'],
+            'Poppy': ['Pop', 'py'], 'Silence': ['Si', 'lence'], 'Sybil': ['Sy', 'bil'],
+            'Trillby': ['Trill', 'by'], 'Tuesday': ['Tues', 'day'], 'Ursula': ['Ur', 'su', 'la'],
+            'Vivian': ['Vi', 'vian'], 'Wendy': ['Wen', 'dy'], 'Zora': ['Zo', 'ra'],
+            'Balthazar': ['Bal', 'tha', 'zar'], 'Basil': ['Ba', 'sil'], 'Bertram': ['Ber', 'tram'],
+            'Bexley': ['Bex', 'ley'], 'Chadwick': ['Chad', 'wick'], 'Clovis': ['Clo', 'vis'],
+            'Destrian': ['Des', 'tri', 'an'], 'Ellis': ['El', 'lis'], 'Erasmus': ['E', 'ras', 'mus'],
+            'Faustus': ['Faus', 'tus'], 'Finn': ['Finn'], 'Fitzhugh': ['Fitz', 'hugh'],
+            'Florian': ['Flo', 'ri', 'an'], 'Fox': ['Fox'], 'Godwin': ['God', 'win'],
+            'Hannibal': ['Han', 'ni', 'bal'], 'Jasper': ['Jas', 'per'], 'Jiles': ['Jiles'],
+            'Jules': ['Jules'], 'Leopold': ['Leo', 'pold'], 'Malarick': ['Ma', 'la', 'rick'],
+            'Mortimer': ['Mor', 'ti', 'mer'], 'Ogden': ['Og', 'den'], 'Orion': ['O', 'ri', 'on'],
+            'Oswald': ['Os', 'wald'], 'Percival': ['Per', 'ci', 'val'], 'Peregrine': ['Pere', 'grine'],
+            'Quentin': ['Quen', 'tin'], 'Redmaine': ['Red', 'maine'], 'Reinhold': ['Rein', 'hold'],
+            'Silas': ['Si', 'las'], 'Stilton': ['Stil', 'ton'], 'Stratford': ['Strat', 'ford'],
+            'Tenpiece': ['Ten', 'piece'], 'Waverly': ['Wa', 'ver', 'ly'], 'Webster': ['Web', 'ster'],
+            'Barrow': ['Bar', 'row'], 'Beetleman': ['Beetle', 'man'], 'Berrycloth': ['Berry', 'cloth'],
+            'Birdwhistle': ['Bird', 'whistle'], 'Bobich': ['Bo', 'bich'], 'Chips': ['Chips'],
+            'Coffin': ['Coffin'], 'Crumpling': ['Crump', 'ling'], 'Culpepper': ['Cul', 'pep', 'per'],
+            'Dankworth': ['Dank', 'worth'], 'Digworthy': ['Dig', 'wor', 'thy'], 'Dreggs': ['Dreggs'],
+            'Gimble': ['Gim', 'ble'], 'Graveworm': ['Grave', 'worm'], 'Greelish': ['Gree', 'lish'],
+            'Hardwick': ['Hard', 'wick'], 'Hatman': ['Hat', 'man'], 'Hovel': ['Ho', 'vel'],
+            'Knibbs': ['Knibbs'], 'Midnighter': ['Mid', 'night', 'er'], 'Needle': ['Nee', 'dle'],
+            'Nethercoat': ['Nether', 'coat'], 'Pestle': ['Pes', 'tle'], 'Relish': ['Re', 'lish'],
+            'Rumbold': ['Rum', 'bold'], 'Runmage': ['Run', 'mage'], 'Sallow': ['Sal', 'low'],
+            'Saltmarsh': ['Salt', 'marsh'], 'Silverless': ['Silver', 'less'], 'Skitter': ['Skit', 'ter'],
+            'Slee': ['Slee'], 'Slitherly': ['Slith', 'er', 'ly'], 'Stoker': ['Sto', 'ker'],
+            'Tartwater': ['Tart', 'wa', 'ter'], 'Tumbler': ['Tumb', 'ler'], 'Villin': ['Vil', 'lin'],
+            'Belvedere': ['Bel', 've', 'dere'], 'Bithersea': ['Bith', 'er', 'sea'], 'Calaver': ['Cal', 'a', 'ver'],
+            'Carvolo': ['Car', 'vo', 'lo'], 'De Rippe': ['De', 'Rippe'], 'Droll': ['Droll'],
+            'Dunlow': ['Dun', 'low'], 'Edevane': ['Ede', 'vane'], 'Erelong': ['Ere', 'long'],
+            'Febland': ['Feb', 'land'], 'Fernsby': ['Ferns', 'by'], 'Fisk': ['Fisk'],
+            'Gastrell': ['Gas', 'trell'], 'Girdwood': ['Gird', 'wood'], 'Gorgon': ['Gor', 'gon'],
+            'Grimeson': ['Grime', 'son'], 'Gruger': ['Gru', 'ger'], 'Hitheryon': ['Hith', 'er', 'yon'],
+            'La Marque': ['La', 'Marque'], 'Malmora': ['Mal', 'mo', 'ra'], 'Miter': ['Mi', 'ter'],
+            'Oblington': ['Obl', 'ing', 'ton'], 'Onymous': ['Ony', 'mous'], 'Phillifent': ['Phil', 'li', 'fent'],
+            'Portendorfer': ['Por', 'ten', 'dor', 'fer'], 'Romatet': ['Ro', 'ma', 'tet'], 'Rothery': ['Roth', 'er', 'y'],
+            'Skorbeck': ['Skor', 'beck'], 'Slora': ['Slo', 'ra'], 'Southwark': ['South', 'wark'],
+            'Stavish': ['Sta', 'vish'], 'Vandermeer': ['Van', 'der', 'meer'], 'Wellbelove': ['Well', 'be', 'love'],
+            'Westergren': ['Wes', 'ter', 'gren'], 'Wexley': ['Wex', 'ley'], 'Wilberforce': ['Wil', 'ber', 'force']
+        };
+
+        function getRandomElement(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function mutateNameSyllable(name) {
+            const syllables = wordSyllables[name];
+            if (!syllables) {
+                return name;
+            }
+            
+            const allSyllables = Object.values(wordSyllables).flat();
+            const newSyllables = [...syllables];
+
+            if (newSyllables.length > 1) {
+                const syllableToSwapIndex = Math.floor(Math.random() * newSyllables.length);
+                const newSyllable = getRandomElement(allSyllables);
+                newSyllables[syllableToSwapIndex] = newSyllable;
+            }
+            
+            const mutatedParts = newSyllables.map((part, index) => {
+                if (index === 0) {
+                    return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+                }
+                return part.toLowerCase();
+            });
+            return mutatedParts.join('');
+        }
+
+        function generateAndDisplayQRCode() {
+            const randomGender = getRandomElement(['female', 'male', 'any']);
+            const randomClass = getRandomElement(['lower', 'upper', 'any']);
+            let firstName;
+            let surname;
+            
+            if (randomGender === 'female') {
+                firstName = getRandomElement(femaleNames);
+            } else if (randomGender === 'male') {
+                firstName = getRandomElement(maleNames);
+            } else {
+                const allFirstNames = [...femaleNames, ...maleNames];
+                firstName = getRandomElement(allFirstNames);
+            }
+            
+            if (randomClass === 'lower') {
+                surname = getRandomElement(lowerClassSurnames);
+            } else if (randomClass === 'upper') {
+                surname = getRandomElement(upperClassSurnames);
+            } else {
+                const allSurnames = [...lowerClassSurnames, ...upperClassSurnames];
+                surname = getRandomElement(allSurnames);
+            }
+            
+            const mutatedFirstName = mutateNameSyllable(firstName);
+            const mutatedSurname = mutateNameSyllable(surname);
+            
+            const fullName = `${mutatedFirstName} ${mutatedSurname}`;
+            
+            // Generate the QR code
+            const qrCanvas = document.getElementById('qr-canvas');
+            new QRious({
+                element: qrCanvas,
+                value: fullName,
+                size: 400,
+                level: 'H'
+            });
+        }
+        
+        window.onload = function() {
+            generateAndDisplayQRCode();
+        }
+
+        // Variable to hold the current opacity value (starts at 0 = clear)
+        let currentOpacity = 0;
+
+        document.addEventListener('keydown', function(event) {
+            // Check for Enter key to generate new QR
+            if (event.key === 'Enter') {
+                generateAndDisplayQRCode();
+            }
+            // Check for arrow keys to adjust opacity
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                
+                // Update opacity based on key pressed
+                if (event.key === 'ArrowLeft') {
+                    // Left arrow decreases white overlay opacity (less obstruction)
+                    currentOpacity = Math.max(0, currentOpacity - 0.1);
+                } else if (event.key === 'ArrowRight') {
+                    // Right arrow increases white overlay opacity (more obstruction)
+                    currentOpacity = Math.min(1, currentOpacity + 0.1);
+                }
+
+                // Apply the new opacity to the white overlay
+                const whiteOverlay = document.getElementById('white-overlay');
+                whiteOverlay.style.opacity = currentOpacity;
+            }
+        });
+    </script>
+</body>
+</html>
