@@ -80,7 +80,7 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .instructions strong{font-family:var(--serif);font-weight:600}
 .instructions ol{margin:4px 0 0 18px}
 
-.page-body{display:flex;gap:28px;align-items:flex-start}
+.page-body{display:flex;flex-direction:column;gap:16px;align-items:flex-start}
 .grid-side{flex:0 0 auto}
 .quiet-zone{background:#fff;display:inline-block;border:1px solid var(--rule);print-color-adjust:exact;-webkit-print-color-adjust:exact}
 .qr-grid{display:inline-block;line-height:0}
@@ -92,8 +92,11 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .qcell.dk{background:#000}
 .qcell.lt.shaded{background:#000;color:transparent;box-shadow:none}
 .qcell.lt.shaded:hover{background:#000}
+/* answer key: shows word locations with letters still readable */
+.qcell.lt.revealed{background:rgba(184,146,42,.5);color:#111}
+.qcell.lt.revealed:hover{background:rgba(184,146,42,.5)}
 
-.words-side{flex:1;min-width:220px}
+.words-side{width:100%}
 .sec-label{font-size:10px;text-transform:uppercase;letter-spacing:.9px;color:#aaa;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #eee}
 .word-chips{display:flex;flex-wrap:wrap;gap:5px}
 .chip{font-size:12px;padding:3px 10px;border-radius:10px;background:#f1efe8;border:.5px solid #ccc;font-family:'Courier New',monospace;font-weight:700;transition:all .25s}
@@ -101,13 +104,15 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .page-foot{margin-top:16px;font-size:11px;color:#aaa;font-style:italic}
 
 @media print{
-  @page{size:landscape;margin:.35in}
+  @page{size:portrait;margin:.35in}
   body{background:#fff}
   .app-header,.form-panel,.print-toolbar,.verify-strip,.complete-banner{display:none!important}
   .puzzle-panel{padding:0;overflow:visible}
   .puzzle-page{border:none;box-shadow:none;padding:0;max-width:none}
+  .grid-side{break-inside:avoid;page-break-inside:avoid}
   .qcell.lt:hover{background:#fff}
   .qcell.lt.shaded{background:#000!important}
+  .qcell.lt.revealed{background:rgba(184,146,42,.5)!important}
 }
 </style>
 </head>
@@ -12966,7 +12971,7 @@ function buildPuzzle(){
   });
   var chars = fillAndScrub(m, layout, words, wordCells);
 
-  var cs = Math.max(10, Math.min(24, Math.floor(624/(m.n+8))));
+  var cs = Math.max(11, Math.min(26, Math.floor(720/(m.n+8))));
   puzzle = {
     text:text, title:title, ec:ec, n:m.n, dark:m.dark, chars:chars,
     placements:layout.placements, wordCells:wordCells, cellOwners:cellOwners,
@@ -13024,8 +13029,8 @@ function renderPuzzle(){
         '</ol>'+
         'The solid black squares are already done for you. Shade only real finds &mdash; stray marks can break the code.</div>'+
       '<div class="page-body">'+
-        '<div class="grid-side"><div class="quiet-zone" style="padding:'+quietPad+'px">'+gHTML+'</div></div>'+
-        '<div class="words-side">'+chips+
+        '<div class="words-side">'+chips+'</div>'+
+        '<div class="grid-side"><div class="quiet-zone" style="padding:'+quietPad+'px">'+gHTML+'</div>'+
           '<div class="page-foot">solve &middot; shade &middot; scan</div>'+
         '</div>'+
       '</div>'+
@@ -13036,10 +13041,10 @@ function renderPuzzle(){
   });
 }
 
-function shadePlacement(idx){
+function shadePlacement(idx, revealMode){
   puzzle.placements[idx].cells.forEach(function(cl){
     var el = document.querySelector('[data-r="'+cl[0]+'"][data-c="'+cl[1]+'"]');
-    if(el) el.classList.add('shaded');
+    if(el) el.classList.add(revealMode ? 'revealed' : 'shaded');
   });
   foundWords.add(idx);
   var ch = document.getElementById('chip-'+idx);
@@ -13064,8 +13069,10 @@ function toggleReveal(){
   var btn = document.getElementById('revealBtn');
   if(btn) btn.textContent = isRevealed ? 'Hide solution' : 'Reveal solution';
   if(isRevealed){
-    for(var i=0;i<puzzle.placements.length;i++) shadePlacement(i);
-    document.getElementById('completeBanner').classList.add('show');
+    // answer key: gold highlight with letters readable — not marker-black,
+    // so word locations stay visible
+    document.querySelectorAll('.qcell.shaded').forEach(function(el){ el.classList.remove('shaded'); });
+    for(var i=0;i<puzzle.placements.length;i++) shadePlacement(i, true);
   } else {
     resetFound();
   }
@@ -13076,6 +13083,7 @@ function resetFound(){
   isRevealed = false;
   var rb = document.getElementById('revealBtn'); if(rb) rb.textContent = 'Reveal solution';
   document.querySelectorAll('.qcell.shaded').forEach(function(el){ el.classList.remove('shaded'); });
+  document.querySelectorAll('.qcell.revealed').forEach(function(el){ el.classList.remove('revealed'); });
   document.querySelectorAll('.found-chip').forEach(function(el){ el.classList.remove('found-chip'); });
   document.getElementById('completeBanner').classList.remove('show');
   foundWords = new Set();
